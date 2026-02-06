@@ -1,6 +1,9 @@
 package handlerfunnels
 
 import (
+	"errors"
+
+	"github.com/adhikag24/policy-based-permission-model/domain/blogs"
 	"github.com/adhikag24/policy-based-permission-model/domain/funnels"
 	"github.com/adhikag24/policy-based-permission-model/http/handlers/shared"
 	"github.com/labstack/echo/v5"
@@ -29,14 +32,12 @@ func (h *Handler) CreateFunnel(c *echo.Context) error {
 		Name:         request.Data.Name,
 	})
 	if err != nil {
-		return c.JSON(500, Response[any]{
-			Code: 500,
-			Errors: []shared.Errors{
-				{
-					Code:    "ErrFailedToCreateFunnel",
-					Message: "Failed to create funnel",
-				},
-			},
+		return h.handleErrorResponse(c, handleErrorResponseSpec{
+			err:                     err,
+			permissionDeniedCode:    "ErrPermissionDenied",
+			permissionDeniedMessage: "Permission denied to create funnel",
+			genericErrorCode:        "ErrFailedToCreateFunnel",
+			genericErrorMessage:     "Failed to create funnel",
 		})
 	}
 
@@ -61,9 +62,12 @@ func (h *Handler) GetFunnel(c *echo.Context) error {
 		FunnelID:     request.Data.FunnelID,
 	})
 	if err != nil {
-		return c.JSON(500, shared.Response[any]{
-			Code:    500,
-			Message: "Failed to get funnel",
+		return h.handleErrorResponse(c, handleErrorResponseSpec{
+			err:                     err,
+			permissionDeniedCode:    "ErrPermissionDenied",
+			permissionDeniedMessage: "Permission denied to retrieve funnel",
+			genericErrorCode:        "ErrFailedToRetrieveFunnel",
+			genericErrorMessage:     "Failed to retrieve funnel",
 		})
 	}
 
@@ -71,5 +75,44 @@ func (h *Handler) GetFunnel(c *echo.Context) error {
 		Code:    200,
 		Message: "Successfully retrieved funnel",
 		Data:    funnel,
+	})
+}
+
+type handleErrorResponseSpec struct {
+	err                     error
+	permissionDeniedCode    string
+	permissionDeniedMessage string
+	genericErrorCode        string
+	genericErrorMessage     string
+}
+
+func (h *Handler) handleErrorResponse(c *echo.Context, spec handleErrorResponseSpec) error {
+	var (
+		err                     = spec.err
+		permissionDeniedCode    = spec.permissionDeniedCode
+		permissionDeniedMessage = spec.permissionDeniedMessage
+		genericErrorCode        = spec.genericErrorCode
+		genericErrorMessage     = spec.genericErrorMessage
+	)
+
+	if errors.Is(err, blogs.ErrPermissionDenied) {
+		return c.JSON(403, Response[any]{
+			Code: 403,
+			Errors: []shared.Errors{
+				{
+					Code:    permissionDeniedCode,
+					Message: permissionDeniedMessage,
+				},
+			},
+		})
+	}
+	return c.JSON(500, Response[any]{
+		Code: 500,
+		Errors: []shared.Errors{
+			{
+				Code:    genericErrorCode,
+				Message: genericErrorMessage,
+			},
+		},
 	})
 }

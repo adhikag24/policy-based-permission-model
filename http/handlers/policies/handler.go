@@ -18,7 +18,6 @@ func NewHandler(service policies.Service) *Handler {
 
 func (h *Handler) CreatePolicy(c *echo.Context) error {
 	var request CommonRequest[Policy]
-
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(400, shared.Response[any]{
 			Code:    400,

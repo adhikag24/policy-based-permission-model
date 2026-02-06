@@ -9,9 +9,9 @@ import (
 
 type Service interface {
 	WriteBlogPage(ctx context.Context, request *WriteBlogPageRequest) error
-	WriteBlogSettings(ctx context.Context, request *WriteBlogSettingsRequest) error
 	ReadBlogPage(ctx context.Context, request *ReadBlogPageRequest) error
 	ReadBlogSettings(ctx context.Context, request *ReadBlogSettingsRequest) error
+	WriteBlogSettings(ctx context.Context, request *WriteBlogSettingsRequest) error
 }
 
 type service struct {
@@ -64,5 +64,14 @@ func (s *service) WriteBlogSettings(ctx context.Context, request *WriteBlogSetti
 }
 
 func (s *service) ReadBlogPage(ctx context.Context, request *ReadBlogPageRequest) error {
+	if isPermitted := s.policiesService.CheckPermission(ctx, &policies.CheckPermissionRequest{
+		AccountID:    request.AccountID,
+		TeamMemberID: request.TeamMemberID,
+		Resource:     fmt.Sprintf("blogs/%d/page/%d", request.BlogID, request.PageID),
+		Action:       policies.ActionWrite,
+	}); !isPermitted {
+		return ErrPermissionDenied
+	}
+
 	return nil
 }
