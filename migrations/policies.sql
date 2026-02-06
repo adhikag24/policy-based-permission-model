@@ -9,6 +9,7 @@ CREATE TABLE
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+-- Add index for faster lookups on account_id, team_member_id, and action
 CREATE INDEX idx_policies_account_id_team_member_id_action ON policies (account_id, team_member_id, action);
 
 INSERT INTO

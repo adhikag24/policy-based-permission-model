@@ -6,9 +6,9 @@ CREATE TABLE
     );
 
 INSERT INTO
-    accounts (name, created_at)
+    accounts (name)
 VALUES
-    ('Acme Corp', NOW ()),
-    ('Globex Inc', NOW ()),
-    ('Umbrella Group', NOW ());
-    ('Wayne Enterprises', NOW ());
+    ('Acme Corp'),
+    ('Globex Inc'),
+    ('Umbrella Group'),
+    ('Wayne Enterprises');
