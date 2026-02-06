@@ -12,5 +12,11 @@ func RegisterRoutes(e *echo.Echo, h *Handlers) {
 	api.POST("/v1/policies/check-permission", h.Policies.CheckPermission)
 
 	api.POST("/v1/funnels", h.Funnels.CreateFunnel)
-	api.POST("/v1/funnels/get", h.Funnels.GetFunnel)
+	api.GET("/v1/funnels/:id", h.Funnels.GetFunnel)
+
+	api.POST("/v1/blogs/pages", h.Blogs.WriteBlogPage)
+	api.GET("/v1/blogs/pages", h.Blogs.ReadBlogPage)
+	api.POST("/v1/blogs/settings", h.Blogs.WriteBlogSettings)
+	api.GET("/v1/blogs/settings/:id", h.Blogs.ReadBlogSettings)
+
 }

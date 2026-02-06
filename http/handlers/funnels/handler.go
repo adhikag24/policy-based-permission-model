@@ -2,8 +2,8 @@ package handlerfunnels
 
 import (
 	"errors"
+	"strconv"
 
-	"github.com/adhikag24/policy-based-permission-model/domain/blogs"
 	"github.com/adhikag24/policy-based-permission-model/domain/funnels"
 	"github.com/adhikag24/policy-based-permission-model/http/handlers/shared"
 	"github.com/labstack/echo/v5"
@@ -26,9 +26,18 @@ func (h *Handler) CreateFunnel(c *echo.Context) error {
 		})
 	}
 
-	err := h.service.CreateFunnel(c.Request().Context(), &funnels.CreateFunnelRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
+	// Mandatory headers.
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
+		return c.JSON(400, shared.Response[any]{
+			Code:    400,
+			Message: "Missing mandatory headers",
+		})
+	}
+
+	err = h.service.CreateFunnel(c.Request().Context(), &funnels.CreateFunnelRequest{
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
 		Name:         request.Data.Name,
 	})
 	if err != nil {
@@ -48,18 +57,21 @@ func (h *Handler) CreateFunnel(c *echo.Context) error {
 }
 
 func (h *Handler) GetFunnel(c *echo.Context) error {
-	var request CommonRequest[GetFunnelRequest]
-	if err := c.Bind(&request); err != nil {
+	funnelID := c.Param("id")
+
+	// Mandatory headers.
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
 		return c.JSON(400, shared.Response[any]{
 			Code:    400,
-			Message: "Invalid request payload",
+			Message: "Missing mandatory headers",
 		})
 	}
 
 	funnel, err := h.service.GetFunnel(c.Request().Context(), &funnels.GetFunnelRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
-		FunnelID:     request.Data.FunnelID,
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
+		FunnelID:     funnelID,
 	})
 	if err != nil {
 		return h.handleErrorResponse(c, handleErrorResponseSpec{
@@ -95,7 +107,7 @@ func (h *Handler) handleErrorResponse(c *echo.Context, spec handleErrorResponseS
 		genericErrorMessage     = spec.genericErrorMessage
 	)
 
-	if errors.Is(err, blogs.ErrPermissionDenied) {
+	if errors.Is(err, funnels.ErrPermissionDenied) {
 		return c.JSON(403, Response[any]{
 			Code: 403,
 			Errors: []shared.Errors{
@@ -115,4 +127,25 @@ func (h *Handler) handleErrorResponse(c *echo.Context, spec handleErrorResponseS
 			},
 		},
 	})
+}
+
+func (h *Handler) getMandatoryHeaders(c *echo.Context) (accountID int64, teamMemberID int64, err error) {
+	accountIDStr := c.Request().Header.Get("X-Account-ID")
+	teamMemberIDStr := c.Request().Header.Get("X-Team-Member-ID")
+
+	if accountIDStr == "" || teamMemberIDStr == "" {
+		return 0, 0, errors.New("missing mandatory headers")
+	}
+
+	accountIDInt, err := strconv.Atoi(accountIDStr)
+	if err != nil {
+		return 0, 0, errors.New("invalid X-Account-ID header")
+	}
+
+	teamMemberIDInt, err := strconv.Atoi(teamMemberIDStr)
+	if err != nil {
+		return 0, 0, errors.New("invalid X-Team-Member-ID header")
+	}
+
+	return int64(accountIDInt), int64(teamMemberIDInt), nil
 }

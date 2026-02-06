@@ -12,6 +12,7 @@ type CheckPermissionRequest struct {
 }
 
 type Policy struct {
+	ID           int64  `json:"id"`
 	AccountID    int64  `json:"account_id"`
 	TeamMemberID int64  `json:"team_member_id"`
 	Resource     string `json:"resource"`

@@ -2,6 +2,7 @@ package blogs
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/adhikag24/policy-based-permission-model/domain/blogs"
 	"github.com/adhikag24/policy-based-permission-model/http/handlers/shared"
@@ -22,9 +23,22 @@ func (h *Handler) WriteBlogPage(c *echo.Context) error {
 		return err
 	}
 
-	err := h.blogsService.WriteBlogPage(c.Request().Context(), &blogs.WriteBlogPageRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
+		return c.JSON(400, shared.Response[any]{
+			Code: 400,
+			Errors: []shared.Errors{
+				{
+					Code:    "ErrMissingMandatoryHeaders",
+					Message: "Missing mandatory headers",
+				},
+			},
+		})
+	}
+
+	err = h.blogsService.WriteBlogPage(c.Request().Context(), &blogs.WriteBlogPageRequest{
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
 		PageID:       request.Data.PageID,
 		Content:      request.Data.Content,
 	})
@@ -45,15 +59,27 @@ func (h *Handler) WriteBlogPage(c *echo.Context) error {
 }
 
 func (h *Handler) ReadBlogPage(c *echo.Context) error {
-	var request CommonRequest[ReadBlogPageRequest]
-	if err := c.Bind(&request); err != nil {
-		return err
+	pageID := c.QueryParam("page_id")
+	blogID := c.QueryParam("blog_id")
+
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
+		return c.JSON(400, shared.Response[any]{
+			Code: 400,
+			Errors: []shared.Errors{
+				{
+					Code:    "ErrMissingMandatoryHeaders",
+					Message: "Missing mandatory headers",
+				},
+			},
+		})
 	}
 
-	err := h.blogsService.ReadBlogPage(c.Request().Context(), &blogs.ReadBlogPageRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
-		PageID:       request.Data.PageID,
+	err = h.blogsService.ReadBlogPage(c.Request().Context(), &blogs.ReadBlogPageRequest{
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
+		PageID:       pageID,
+		BlogID:       blogID,
 	})
 	if err != nil {
 		return h.handleErrorResponse(c, handleErrorResponseSpec{
@@ -72,14 +98,25 @@ func (h *Handler) ReadBlogPage(c *echo.Context) error {
 }
 
 func (h *Handler) ReadBlogSettings(c *echo.Context) error {
-	var request CommonRequest[ReadBlogSettingsRequest]
-	if err := c.Bind(&request); err != nil {
-		return err
+	blogID := c.Param("id")
+
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
+		return c.JSON(400, shared.Response[any]{
+			Code: 400,
+			Errors: []shared.Errors{
+				{
+					Code:    "ErrMissingMandatoryHeaders",
+					Message: "Missing mandatory headers",
+				},
+			},
+		})
 	}
 
-	err := h.blogsService.ReadBlogSettings(c.Request().Context(), &blogs.ReadBlogSettingsRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
+	err = h.blogsService.ReadBlogSettings(c.Request().Context(), &blogs.ReadBlogSettingsRequest{
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
+		BlogID:       blogID,
 	})
 	if err != nil {
 		return h.handleErrorResponse(c, handleErrorResponseSpec{
@@ -103,22 +140,31 @@ func (h *Handler) WriteBlogSettings(c *echo.Context) error {
 		return err
 	}
 
-	err := h.blogsService.WriteBlogSettings(c.Request().Context(), &blogs.WriteBlogSettingsRequest{
-		AccountID:    request.Data.AccountID,
-		TeamMemberID: request.Data.TeamMemberID,
+	accountID, teamMemberID, err := h.getMandatoryHeaders(c)
+	if err != nil {
+		return h.handleErrorResponse(c, handleErrorResponseSpec{
+			err:                     err,
+			permissionDeniedCode:    "ErrPermissionDenied",
+			permissionDeniedMessage: "Permission denied to write blog settings",
+			genericErrorCode:        "ErrFailedToWriteBlogSettings",
+			genericErrorMessage:     "Failed to write blog settings",
+		})
+	}
+
+	err = h.blogsService.WriteBlogSettings(c.Request().Context(), &blogs.WriteBlogSettingsRequest{
+		AccountID:    accountID,
+		TeamMemberID: teamMemberID,
 		BlogID:       request.Data.BlogID,
 		Title:        request.Data.Title,
 		Content:      request.Data.Content,
 	})
 	if err != nil {
-		return c.JSON(500, Response[any]{
-			Code: 500,
-			Errors: []shared.Errors{
-				{
-					Code:    "ErrFailedToWriteBlogSettings",
-					Message: "Failed to write blog settings",
-				},
-			},
+		return h.handleErrorResponse(c, handleErrorResponseSpec{
+			err:                     err,
+			permissionDeniedCode:    "ErrPermissionDenied",
+			permissionDeniedMessage: "Permission denied to write blog settings",
+			genericErrorCode:        "ErrFailedToWriteBlogSettings",
+			genericErrorMessage:     "Failed to write blog settings",
 		})
 	}
 
@@ -165,4 +211,25 @@ func (h *Handler) handleErrorResponse(c *echo.Context, spec handleErrorResponseS
 			},
 		},
 	})
+}
+
+func (h *Handler) getMandatoryHeaders(c *echo.Context) (accountID int64, teamMemberID int64, err error) {
+	accountIDStr := c.Request().Header.Get("X-Account-ID")
+	teamMemberIDStr := c.Request().Header.Get("X-Team-Member-ID")
+
+	if accountIDStr == "" || teamMemberIDStr == "" {
+		return 0, 0, errors.New("missing mandatory headers")
+	}
+
+	accountIDInt, err := strconv.Atoi(accountIDStr)
+	if err != nil {
+		return 0, 0, errors.New("invalid X-Account-ID header")
+	}
+
+	teamMemberIDInt, err := strconv.Atoi(teamMemberIDStr)
+	if err != nil {
+		return 0, 0, errors.New("invalid X-Team-Member-ID header")
+	}
+
+	return int64(accountIDInt), int64(teamMemberIDInt), nil
 }

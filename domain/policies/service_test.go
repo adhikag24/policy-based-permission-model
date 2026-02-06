@@ -20,7 +20,7 @@ func setup(ctrl *gomock.Controller) *test {
 }
 
 func TestCreatePolicy(t *testing.T) {
-	t.Run("Fails to create policy when user already has broader policy", func(t *testing.T) {
+	t.Run("Successfully creates policy when user already has broader policy", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		test := setup(ctrl)

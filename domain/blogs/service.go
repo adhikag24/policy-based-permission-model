@@ -28,7 +28,7 @@ func (s *service) ReadBlogSettings(ctx context.Context, request *ReadBlogSetting
 	if isPermitted := s.policiesService.CheckPermission(ctx, &policies.CheckPermissionRequest{
 		AccountID:    request.AccountID,
 		TeamMemberID: request.TeamMemberID,
-		Resource:     fmt.Sprintf("blogs/%d/settings", request.BlogID),
+		Resource:     fmt.Sprintf("blogs/%s/settings", request.BlogID),
 		Action:       policies.ActionRead,
 	}); !isPermitted {
 		return ErrPermissionDenied
@@ -41,7 +41,7 @@ func (s *service) WriteBlogPage(ctx context.Context, request *WriteBlogPageReque
 	if isPermitted := s.policiesService.CheckPermission(ctx, &policies.CheckPermissionRequest{
 		AccountID:    request.AccountID,
 		TeamMemberID: request.TeamMemberID,
-		Resource:     fmt.Sprintf("blogs/%d", request.PageID),
+		Resource:     fmt.Sprintf("blogs/%s", request.PageID), // Check if user has permission to write this blog page.
 		Action:       policies.ActionWrite,
 	}); !isPermitted {
 		return ErrPermissionDenied
@@ -54,7 +54,7 @@ func (s *service) WriteBlogSettings(ctx context.Context, request *WriteBlogSetti
 	if isPermitted := s.policiesService.CheckPermission(ctx, &policies.CheckPermissionRequest{
 		AccountID:    request.AccountID,
 		TeamMemberID: request.TeamMemberID,
-		Resource:     "blogs/settings",
+		Resource:     fmt.Sprintf("blogs/%s/settings", request.BlogID),
 		Action:       policies.ActionWrite,
 	}); !isPermitted {
 		return ErrPermissionDenied
@@ -67,8 +67,8 @@ func (s *service) ReadBlogPage(ctx context.Context, request *ReadBlogPageRequest
 	if isPermitted := s.policiesService.CheckPermission(ctx, &policies.CheckPermissionRequest{
 		AccountID:    request.AccountID,
 		TeamMemberID: request.TeamMemberID,
-		Resource:     fmt.Sprintf("blogs/%d/page/%d", request.BlogID, request.PageID),
-		Action:       policies.ActionWrite,
+		Resource:     fmt.Sprintf("blogs/%s/pages/%s", request.BlogID, request.PageID), // Simulates multiple identifiers in resource.
+		Action:       policies.ActionRead,
 	}); !isPermitted {
 		return ErrPermissionDenied
 	}

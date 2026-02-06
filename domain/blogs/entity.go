@@ -5,13 +5,13 @@ type WriteBlogPageRequest struct {
 	TeamMemberID int64
 	Title        string
 	Content      string
-	PageID       int64
+	PageID       string
 }
 
 type WriteBlogSettingsRequest struct {
 	AccountID    int64
 	TeamMemberID int64
-	BlogID       int64
+	BlogID       string
 	Title        string
 	Content      string
 }
@@ -19,12 +19,12 @@ type WriteBlogSettingsRequest struct {
 type ReadBlogPageRequest struct {
 	AccountID    int64
 	TeamMemberID int64
-	BlogID       int64
-	PageID       int64
+	BlogID       string
+	PageID       string
 }
 
 type ReadBlogSettingsRequest struct {
 	AccountID    int64
 	TeamMemberID int64
-	BlogID       int64
+	BlogID       string
 }

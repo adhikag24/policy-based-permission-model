@@ -21,14 +21,14 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) CreatePolicy(ctx context.Context, policy *Policy) (*Policy, error) {
-	// If user already has broader policy, no need to add this one.
-	// E.g., if user has blogs/*, no need to add blogs/123/*
-	if s.isUserHasBroaderPolicy(policy) {
+	// If user already has broader policy, reject lower level policy.
+	// E.g., if user has blogs/* write, reject  blogs/123/* write permission
+	if s.isUserHasBroaderPolicy(ctx, policy) {
 		return nil, ErrUserAlreadyHasBroaderPolicy
 	}
 
 	// Delete existing policies that match the resource prefix to avoid duplicates.
-	// E.g., if adding blogs/*, remove blogs/123/* first.
+	// E.g., if adding blogs/* and user has blogs/123/*, remove blogs/123/* first.
 	if err := s.repo.DeleteByPrefix(ctx, &DeleteByPrefixRequest{
 		AccountID:      policy.AccountID,
 		TeamMemberID:   policy.TeamMemberID,
@@ -41,8 +41,8 @@ func (s *service) CreatePolicy(ctx context.Context, policy *Policy) (*Policy, er
 	return s.repo.Create(ctx, policy)
 }
 
-func (s *service) isUserHasBroaderPolicy(policy *Policy) bool {
-	currentPolicies, err := s.repo.Get(context.Background(), &GetPolicyRequest{
+func (s *service) isUserHasBroaderPolicy(ctx context.Context, policy *Policy) bool {
+	currentPolicies, err := s.repo.Get(ctx, &GetPolicyRequest{
 		AccountID:    policy.AccountID,
 		TeamMemberID: policy.TeamMemberID,
 		Action:       policy.Action,
@@ -60,11 +60,13 @@ func (s *service) hasBroaderPolicy(resource string, policies []Policy) bool {
 		if s.isRootPolicies(policy.Resource) {
 			return true
 		}
-		if strings.HasSuffix(policy.Resource, "/*") {
-			prefix := strings.TrimSuffix(policy.Resource, "*")
-			if strings.HasPrefix(resource, prefix) {
-				return true
-			}
+
+		if policy.Resource == resource {
+			return true
+		}
+
+		if s.checkBroaderPolicy(policy.Resource, resource) {
+			return true
 		}
 	}
 	return false
@@ -80,7 +82,11 @@ func (s *service) getPrefixByResource(resource string) string {
 	}
 
 	if strings.HasSuffix(resource, "/*") {
-		return strings.TrimSuffix(resource, "*") // E.g., blogs/* -> blogs/
+		return strings.TrimSuffix(resource, "/*") // E.g., blogs/* -> blogs
+	}
+
+	if strings.HasSuffix(resource, "/") {
+		return resource // E.g., blogs/
 	}
 
 	return resource + "/"
@@ -122,15 +128,23 @@ func (s *service) checkResourceAccess(policyResource, requestResource string, ac
 	}
 
 	// If user has access to all sub-resources under a resource. E.g., blogs/*
-	if strings.HasSuffix(policyResource, "/*") {
-		prefix := strings.TrimSuffix(policyResource, "*") // E.g., blogs/* -> blogs/
-		return strings.HasPrefix(requestResource, prefix) // E.g., blogs/123 has prefix blogs/
+	if s.checkBroaderPolicy(policyResource, requestResource) {
+		return true
 	}
 
 	// If user has access to specific resource and its sub-resources. E.g., blogs/11/pages/12
 	// Then they can read blogs/11, but not write.
 	if strings.HasPrefix(policyResource, requestResource) && action == ActionRead {
 		return true
+	}
+
+	return false
+}
+
+func (s *service) checkBroaderPolicy(userResource, resourceRequested string) bool {
+	if strings.HasSuffix(userResource, "/*") {
+		prefix := strings.TrimSuffix(userResource, "*")     // E.g., blogs/* -> blogs/
+		return strings.HasPrefix(resourceRequested, prefix) // E.g., blogs/123 has prefix blogs/
 	}
 
 	return false

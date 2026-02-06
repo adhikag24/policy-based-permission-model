@@ -8,9 +8,7 @@ type (
 )
 
 type CreateFunnelRequest struct {
-	AccountID    int64  `json:"account_id"`
-	TeamMemberID int64  `json:"team_member_id"`
-	Name         string `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetFunnelRequest struct {

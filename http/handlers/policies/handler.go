@@ -53,10 +53,18 @@ func (h *Handler) CreatePolicy(c *echo.Context) error {
 		})
 	}
 
-	return c.JSON(201, Response[policies.Policy]{
+	responsePolicy := &Policy{
+		ID:           policy.ID,
+		AccountID:    policy.AccountID,
+		TeamMemberID: policy.TeamMemberID,
+		Resource:     policy.Resource,
+		Action:       string(policy.Action),
+	}
+
+	return c.JSON(201, Response[*Policy]{
 		Code:    201,
 		Message: "Successfully created policy",
-		Data:    *policy,
+		Data:    responsePolicy,
 	})
 }
 

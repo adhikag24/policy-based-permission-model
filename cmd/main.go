@@ -1,11 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 
+	"github.com/adhikag24/policy-based-permission-model/domain/blogs"
+	"github.com/adhikag24/policy-based-permission-model/domain/funnels"
 	"github.com/adhikag24/policy-based-permission-model/domain/policies"
 	"github.com/adhikag24/policy-based-permission-model/http"
+	handlersblogs "github.com/adhikag24/policy-based-permission-model/http/handlers/blogs"
+	handlersfunnels "github.com/adhikag24/policy-based-permission-model/http/handlers/funnels"
 	handlerspolicies "github.com/adhikag24/policy-based-permission-model/http/handlers/policies"
 	"github.com/adhikag24/policy-based-permission-model/infrastructure/mysql"
 	mysqlpolicies "github.com/adhikag24/policy-based-permission-model/infrastructure/mysql/policies"
@@ -22,7 +25,6 @@ func main() {
 
 	db, err := mysql.Connect(config.MySQL)
 	if err != nil {
-		fmt.Println("err", err)
 		panic("failed to connect database")
 	}
 
@@ -30,8 +32,16 @@ func main() {
 	policiesService := policies.NewService(policiesRepository)
 	policiesHandler := handlerspolicies.NewHandler(policiesService)
 
+	funnelsServuce := funnels.NewService(policiesService)
+	funnelsHandler := handlersfunnels.NewHandler(funnelsServuce)
+
+	blogsService := blogs.NewService(policiesService)
+	blogsHandler := handlersblogs.NewHandler(blogsService)
+
 	http.RegisterRoutes(e, &http.Handlers{
 		Policies: policiesHandler,
+		Funnels:  funnelsHandler,
+		Blogs:    blogsHandler,
 	})
 
 	slog.Info("starting server on :8080")
