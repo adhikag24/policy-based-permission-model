@@ -9,10 +9,13 @@ import (
 	handlerspolicies "github.com/adhikag24/policy-based-permission-model/http/handlers/policies"
 	"github.com/adhikag24/policy-based-permission-model/infrastructure/mysql"
 	mysqlpolicies "github.com/adhikag24/policy-based-permission-model/infrastructure/mysql/policies"
+	"github.com/adhikag24/policy-based-permission-model/utils"
 	"github.com/labstack/echo/v5"
 )
 
 func main() {
+	utils.LoadEnv()
+
 	e := echo.New()
 
 	config := initializeConfig()
@@ -40,13 +43,29 @@ type Config struct {
 }
 
 func initializeConfig() *Config {
+	var (
+		mysqlUsername = utils.EnvKey("MYSQL_USERNAME").GetValue()
+		mysqlPassword = utils.EnvKey("MYSQL_PASSWORD").GetValue()
+		mysqlHost     = utils.EnvKey("MYSQL_HOST").GetValue()
+		mysqlDatabase = utils.EnvKey("MYSQL_DATABASE").GetValue()
+		mysqlPort     = utils.EnvKey("MYSQL_PORT").GetValue()
+	)
+
+	if mysqlHost == "" || mysqlUsername == "" || mysqlPassword == "" || mysqlDatabase == "" {
+		panic("missing required MySQL environment variables")
+	}
+
+	if mysqlPort == "" {
+		mysqlPort = "3306"
+	}
+
 	return &Config{
 		MySQL: mysql.MySQLConfig{
-			Username: "root",
-			Password: "admin",
-			Host:     "127.0.0.1",
-			Port:     3306,
-			DBName:   "policy-based-permission-model",
+			Username: mysqlUsername,
+			Password: mysqlPassword,
+			Host:     mysqlHost,
+			Port:     mysqlPort,
+			DBName:   mysqlDatabase,
 		},
 	}
 }

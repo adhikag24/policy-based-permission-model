@@ -3,6 +3,7 @@ module github.com/adhikag24/policy-based-permission-model
 go 1.25.1
 
 require (
+	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v5 v5.0.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0

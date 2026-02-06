@@ -4,6 +4,6 @@ type MySQLConfig struct {
 	Username string
 	Password string
 	Host     string
-	Port     int
+	Port     string
 	DBName   string
 }
